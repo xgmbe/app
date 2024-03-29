@@ -4,5 +4,3 @@ streamlit
 cython
 numpy
 pandas
-time
-
