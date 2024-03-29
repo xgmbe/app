@@ -4,6 +4,5 @@ streamlit
 cython
 numpy
 pandas
-sys
 time
 
