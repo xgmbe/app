@@ -1,0 +1,10 @@
+selenium
+telethon
+streamlit
+cython
+numpy
+pandas
+os
+sys
+time
+
