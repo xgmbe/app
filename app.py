@@ -1,10 +1,8 @@
 import threading
 import pandas as pd
-import os
 import streamlit as st
 import configparser
 import csv
-import time
 import asyncio
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetDialogsRequest
@@ -42,6 +40,34 @@ def load_config():
         "api_hash": cpass.get("cred", "hash"),
         "phone": cpass.get("cred", "phone"),
     }
+
+
+def generate_csv_in_memory(all_participants, target_group):
+    """Generates a CSV file in memory from a list of participants and returns it."""
+    from io import StringIO
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["username", "user_id", "access hash", "name", "group", "group id"])
+
+    for user in all_participants:
+        username = user.username if user.username else ""
+        first_name = user.first_name if user.first_name else ""
+        last_name = user.last_name if user.last_name else ""
+        name = (first_name + " " + last_name).strip()
+        writer.writerow(
+            [
+                username,
+                user.id,
+                user.access_hash,
+                name,
+                target_group.title,
+                target_group.id,
+            ]
+        )
+
+    output.seek(0)  # Rewind the buffer to the beginning after writing
+    return output.getvalue()
 
 
 async def async_scrape_members(config):
@@ -130,49 +156,25 @@ async def async_scrape_members(config):
                 selected_index = group_titles.index(selected_group_title)
                 target_group = st.session_state["groups"][selected_index]
 
-                csv_file_name = st.text_input(
-                    "Enter a name for the CSV file:", value="members.csv"
-                )
-
                 if st.button("Fetch Members"):
-                    # Fetch members
                     st.warning("Fetching members...")
                     all_participants = await client.get_participants(
                         target_group, aggressive=True
                     )
 
-                    # Save to CSV
-                    st.warning(f"Saving members to {csv_file_name}...")
-                    with open(csv_file_name, "w", encoding="UTF-8") as f:
-                        writer = csv.writer(f, delimiter=",", lineterminator="\n")
-                        writer.writerow(
-                            [
-                                "username",
-                                "user_id",
-                                "access hash",
-                                "name",
-                                "group",
-                                "group id",
-                            ]
-                        )
-                        for user in all_participants:
-                            username = user.username if user.username else ""
-                            first_name = user.first_name if user.first_name else ""
-                            last_name = user.last_name if user.last_name else ""
-                            name = (first_name + " " + last_name).strip()
-                            writer.writerow(
-                                [
-                                    username,
-                                    user.id,
-                                    user.access_hash,
-                                    name,
-                                    target_group.title,
-                                    target_group.id,
-                                ]
-                            )
-                        st.success(
-                            f"Members have been successfully saved to '{csv_file_name}'."
-                        )
+                    # Generate CSV in memory to offer for download without saving on the server
+                    csv_file = generate_csv_in_memory(all_participants, target_group)
+
+                    # Provide the CSV file for download with guidance
+                    st.success(
+                        f"Members have been successfully prepared for download. Please click the download button below."
+                    )
+                    st.download_button(
+                        label="Download Members CSV",
+                        data=csv_file,
+                        mime="text/csv",
+                        help="Click to download the file to your default download directory. Please move it to your desired location manually.",
+                    )
 
         else:
             st.error("Failed to connect to Telegram client.")
@@ -309,8 +311,18 @@ def upload_and_send():
                     thread.join()
                     # crete new dataframe with sent users
                     sent_users_df = pd.DataFrame(users)
-                    sent_users_df.to_csv("sent_users.csv", index=False)
-                    st.success("Sent users saved to 'sent_users.csv'.")
+                    # convert dataframe to csv
+                    csv_file = sent_users_df.to_csv(index=False)
+
+                    st.success(
+                        f"Members have been successfully prepared for download. Please click the download button below."
+                    )
+                    st.download_button(
+                        label="Download Sent Users CSV",
+                        data=csv_file,
+                        mime="text/csv",
+                        help="Click to download the file to your default download directory. Please move it to your desired location manually.",
+                    )
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
             else:
