@@ -12,7 +12,7 @@ from telethon.errors import FloodWaitError, SessionPasswordNeededError
 
 
 def banner():
-    st.title("Setup")
+    st.title("Telegram Automation")
 
 
 def config_setup():
@@ -284,12 +284,13 @@ def run_async(users, message_template, sleep_time):
 
 
 def upload_and_send():
-    st.subheader("Upload CSV and Send Messages")
+    st.subheader("Upload CSV")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
         users = df.to_dict("records")  # Convert dataframe to list of dicts
 
+        st.subheader("Send Messages")
         message_template = st.text_area(
             "Enter your message:",
             value="Hello, write here the message!",
@@ -330,7 +331,7 @@ def upload_and_send():
 
 
 def scrape_members():
-    banner()
+    st.subheader("Scrape Groups")
     config = load_config()
 
     with st.spinner("Scraping members..."):
